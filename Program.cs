@@ -1,12 +1,5 @@
 using Amazon.S3;
 using Amazon.S3.Model;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,8 +49,8 @@ app.MapPut("/s3files/{bucketName}/{objectKey}", async (HttpContext context, stri
     {
         return Results.NotFound($"Bucket {bucketName} does not exist.");
     }
-
     // Get the uploaded file from the request
+    // avoid user or programmer mistakes like 415
     var form = await context.Request.ReadFormAsync();
     var file = form.Files.GetFile("file");
 
@@ -81,6 +74,53 @@ app.MapPut("/s3files/{bucketName}/{objectKey}", async (HttpContext context, stri
     await amazonS3.PutObjectAsync(request);
 
     return Results.Ok($"File {objectKey} updated in S3 successfully!");
+});
+
+app.MapPost("/upload", async (HttpContext context, string bucketName, string? prefix, IAmazonS3 amazonS3) =>
+{
+    bool bucketExists = await amazonS3.DoesS3BucketExistAsync(bucketName);
+    if (!bucketExists)
+    {
+        return Results.NotFound($"Bucket {bucketName} does not exist.");
+    }
+    var form = await context.Request.ReadFormAsync();
+    var file = form.Files.GetFile("file");
+
+    if (file == null)
+    {
+        return Results.BadRequest("File not found in request.");
+    }
+
+    PutObjectRequest request = new()
+    {
+        BucketName = bucketName,
+        Key = String.IsNullOrEmpty(prefix) ? file.FileName : $"{prefix?.TrimEnd('/')}/{file.FileName}",
+        InputStream = file.OpenReadStream()
+    };
+
+    request.Metadata.Add("Content-Type", file.ContentType);
+    await amazonS3.PutObjectAsync(request);
+    return Results.Ok($"File {prefix}/{file.FileName} uploaded to {bucketName} successfully!");
+
+});
+
+app.MapGet("/download/{filePath}", async (string filePath, IAmazonS3 amazonS3) =>
+{
+    string cdnUrl = "https://dw98tylghuyai.cloudfront.net/"; 
+    string[] fileParts = filePath.Split('/');
+    string objectKey = string.Join('/', fileParts);
+
+    var fileUrl = cdnUrl + objectKey;
+    
+    var httpClient = new HttpClient();
+    var response = await httpClient.GetAsync(fileUrl);
+    if (!response.IsSuccessStatusCode)
+    {
+        return Results.NotFound();
+    }
+    var stream = await response.Content.ReadAsStreamAsync();
+
+    return Results.File(stream, response.Content.Headers.ContentType?.MediaType);
 });
 
 app.Run();
