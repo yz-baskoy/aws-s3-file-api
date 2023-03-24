@@ -7,40 +7,6 @@ builder.Services.AddAWSService<IAmazonS3>();
 
 var app = builder.Build();
 
-app.MapGet("/files", async (IAmazonS3 amazonS3, string bucketName, string? prefix) =>
-{
-    bool bucketExists = await amazonS3.DoesS3BucketExistAsync(bucketName);
-    if (!bucketExists)
-    {
-        return Results.NotFound($"Bucket {bucketName} does not exist");
-    }
-
-    ListObjectsV2Request request = new()
-    {
-        BucketName = bucketName,
-        Prefix = prefix
-    };
-
-    ListObjectsV2Response response = await amazonS3.ListObjectsV2Async(request);
-
-    List<S3ObjectsDTO> filesDatas = response.S3Objects.Select(obj =>
-    {
-        GetPreSignedUrlRequest urlRequest = new()
-        {
-            BucketName = bucketName,
-            Key = obj.Key,
-            Expires = DateTime.UtcNow.AddMinutes(1)
-        };
-        return new S3ObjectsDTO
-        {
-            Name = obj.Key,
-            FileUrl = amazonS3.GetPreSignedURL(urlRequest)
-        };
-    }).ToList();
-
-    return Results.Ok(filesDatas);
-});
-
 //@IFormFile object passed as a parameter to the handler delegate can handle any type of file, including images.
 app.MapPut("/s3files/{bucketName}/{objectKey}", async (HttpContext context, string bucketName, string objectKey, IAmazonS3 amazonS3) =>
 {
