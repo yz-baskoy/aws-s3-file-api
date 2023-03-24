@@ -9,7 +9,7 @@
     }
   },
   "profiles": {
-    "lyrebird_task": {
+    "s3-file-api": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,

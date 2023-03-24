@@ -16,7 +16,7 @@ app.MapPut("/s3files/{bucketName}/{objectKey}", async (HttpContext context, stri
         return Results.NotFound($"Bucket {bucketName} does not exist.");
     }
     // Get the uploaded file from the request
-    // avoid user or programmer mistakes like 415
+    // Avoid user or programmer mistakes like Http-415
     var form = await context.Request.ReadFormAsync();
     var file = form.Files.GetFile("file");
 
