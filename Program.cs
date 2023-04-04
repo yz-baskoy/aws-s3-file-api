@@ -57,21 +57,29 @@ app.MapPost("/upload", async (HttpContext context, string bucketName, string? pr
         return Results.BadRequest("File not found in request.");
     }
 
-    PutObjectRequest request = new()
+    try
     {
-        BucketName = bucketName,
-        Key = String.IsNullOrEmpty(prefix) ? file.FileName : $"{prefix?.TrimEnd('/')}/{file.FileName}",
-        InputStream = file.OpenReadStream()
-    };
-
-    request.Metadata.Add("Content-Type", file.ContentType);
-    await amazonS3.PutObjectAsync(request);
-    return Results.Ok($"File {prefix}/{file.FileName} uploaded to {bucketName} successfully!");
+        using var stream = file.OpenReadStream();
+        var putRequest = new PutObjectRequest
+        {
+            BucketName = bucketName,
+            Key = string.IsNullOrEmpty(prefix) ? file.FileName : $"{prefix.TrimEnd('/')}/{file.FileName}",
+            InputStream = stream,
+            ContentType = file.ContentType            
+        };
+        await amazonS3.PutObjectAsync(putRequest);
+        return Results.Ok($"File {putRequest.Key} uploaded to {bucketName} successfully!");
+    }
+    catch (AmazonS3Exception ex)
+    {
+        return Results.BadRequest($"Error uploading file: {ex.Message}");
+    }
 
 });
 
 app.MapGet("/download/{filePath}", async (string filePath, IAmazonS3 amazonS3) =>
 {
+    // Replace with your won cdn
     string cdnUrl = "https://dw98tylghuyai.cloudfront.net/"; 
     string[] fileParts = filePath.Split('/');
     string objectKey = string.Join('/', fileParts);
