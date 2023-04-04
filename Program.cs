@@ -79,7 +79,7 @@ app.MapPost("/upload", async (HttpContext context, string bucketName, string? pr
 
 app.MapGet("/download/{filePath}", async (string filePath, IAmazonS3 amazonS3) =>
 {
-    // Replace with your won cdn
+    // Replace with your own cdn
     string cdnUrl = "https://dw98tylghuyai.cloudfront.net/"; 
     string[] fileParts = filePath.Split('/');
     string objectKey = string.Join('/', fileParts);
