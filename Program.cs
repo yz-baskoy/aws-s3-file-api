@@ -7,7 +7,6 @@ builder.Services.AddAWSService<IAmazonS3>();
 
 var app = builder.Build();
 
-//@IFormFile object passed as a parameter to the handler delegate can handle any type of file, including images.
 app.MapPut("/s3files/{bucketName}/{objectKey}", async (HttpContext context, string bucketName, string objectKey, IAmazonS3 amazonS3) =>
 {
     bool bucketExists = await amazonS3.DoesS3BucketExistAsync(bucketName);
@@ -77,17 +76,17 @@ app.MapPost("/upload", async (HttpContext context, string bucketName, string? pr
 
 });
 
-app.MapGet("/download/{filePath}", async (string filePath, IAmazonS3 amazonS3) =>
+app.MapGet("/download/{imagePath}", async (string imagePath, IAmazonS3 amazonS3) =>
 {
     // Replace with your own cdn
     string cdnUrl = "https://dw98tylghuyai.cloudfront.net/"; 
-    string[] fileParts = filePath.Split('/');
-    string objectKey = string.Join('/', fileParts);
+    string[] imageParts = imagePath.Split('/');
+    string objectKey = string.Join('/', imageParts);
 
-    var fileUrl = cdnUrl + objectKey;
+    var imageUrl = cdnUrl + objectKey;
     
     var httpClient = new HttpClient();
-    var response = await httpClient.GetAsync(fileUrl);
+    var response = await httpClient.GetAsync(imageUrl);
     if (!response.IsSuccessStatusCode)
     {
         return Results.NotFound();
