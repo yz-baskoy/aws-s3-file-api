@@ -17,9 +17,9 @@ app.MapPut("/s3files/{bucketName}/{objectKey}", async (HttpContext context, stri
     // Get the uploaded file from the request
     // Avoid user or programmer mistakes like Http-415
     var form = await context.Request.ReadFormAsync();
-    var file = form.Files.GetFile("file");
+    var image = form.Files.GetFile("image");
 
-    if (file == null)
+    if (image == null)
     {
         return Results.BadRequest("File not found in request.");
     }
@@ -27,15 +27,15 @@ app.MapPut("/s3files/{bucketName}/{objectKey}", async (HttpContext context, stri
     // Delete the old object with the same object key
     await amazonS3.DeleteObjectAsync(bucketName, objectKey);
 
-    // Upload the new file as a new object with the same object key
+    // Upload the new image as a new object with the same object key
     PutObjectRequest request = new()
     {
         BucketName = bucketName,
         Key = objectKey,
-        InputStream = file.OpenReadStream()
+        InputStream = image.OpenReadStream()
     };
 
-    request.Metadata.Add("Content-Type", file.ContentType);
+    request.Metadata.Add("Content-Type", image.ContentType);
     await amazonS3.PutObjectAsync(request);
 
     return Results.Ok($"File {objectKey} updated in S3 successfully!");
@@ -49,29 +49,29 @@ app.MapPost("/upload", async (HttpContext context, string bucketName, string? pr
         return Results.NotFound($"Bucket {bucketName} does not exist.");
     }
     var form = await context.Request.ReadFormAsync();
-    var file = form.Files.GetFile("file");
+    var image = form.Files.GetFile("image");
 
-    if (file == null)
+    if (image == null)
     {
         return Results.BadRequest("File not found in request.");
     }
 
     try
     {
-        using var stream = file.OpenReadStream();
+        using var stream = image.OpenReadStream();
         var putRequest = new PutObjectRequest
         {
             BucketName = bucketName,
-            Key = string.IsNullOrEmpty(prefix) ? file.FileName : $"{prefix.TrimEnd('/')}/{file.FileName}",
+            Key = string.IsNullOrEmpty(prefix) ? image.FileName : $"{prefix.TrimEnd('/')}/{image.FileName}",
             InputStream = stream,
-            ContentType = file.ContentType            
+            ContentType = image.ContentType            
         };
         await amazonS3.PutObjectAsync(putRequest);
         return Results.Ok($"File {putRequest.Key} uploaded to {bucketName} successfully!");
     }
     catch (AmazonS3Exception ex)
     {
-        return Results.BadRequest($"Error uploading file: {ex.Message}");
+        return Results.BadRequest($"Error uploading image: {ex.Message}");
     }
 
 });
